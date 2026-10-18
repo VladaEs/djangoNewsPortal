@@ -7,6 +7,8 @@ services:
       MYSQL_USER: ${MYSQL_USER:-news}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-news-password}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-password}
+    ports: 
+      - 3307:3306
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
