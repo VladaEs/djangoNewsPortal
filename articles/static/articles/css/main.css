@@ -55,8 +55,23 @@ a:hover {
     text-transform: uppercase;
 }
 
-.utility-bar a {
+.utility-bar a,
+.utility-action {
     color: #fff;
+}
+
+.utility-action {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    letter-spacing: inherit;
+    text-decoration: underline;
+    text-transform: inherit;
+}
+
+.utility-action:hover,
+.utility-action:focus-visible {
+    color: var(--color-accent);
 }
 
 .masthead {
@@ -286,8 +301,68 @@ a:hover {
     opacity: 0.88;
 }
 
+.btn-outline-editorial {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    font-weight: 700;
+}
+
+.btn-outline-editorial:hover,
+.btn-outline-editorial:focus {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: #fff;
+}
+
+.auth-page {
+    background:
+        linear-gradient(rgb(244 241 234 / 88%), rgb(244 241 234 / 96%)),
+        repeating-linear-gradient(90deg, transparent 0 79px, var(--color-rule) 80px);
+}
+
+.auth-card {
+    max-width: 560px;
+    border-top: 4px solid var(--color-accent);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-soft);
+}
+
+.auth-card h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    letter-spacing: -0.04em;
+}
+
+.auth-card .form-control {
+    min-height: 3.25rem;
+    border-color: var(--color-rule);
+    background: #fff;
+}
+
+.auth-card .form-control:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 0.2rem rgb(165 28 48 / 14%);
+}
+
+.auth-note {
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-rule);
+}
+
+.auth-note a {
+    color: var(--color-accent);
+    font-weight: 700;
+}
+
+.auth-help ul {
+    margin-bottom: 0;
+    padding-left: 1.2rem;
+}
+
 .article-container {
-    max-width: 820px;
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 1rem;
 }
 
 .back-link {
@@ -298,7 +373,7 @@ a:hover {
 }
 
 .article-title {
-    font-size: clamp(2.5rem, 7vw, 5.4rem);
+    font-size: clamp(2.5rem, 4vw, 4.5rem);
     line-height: 0.98;
     letter-spacing: -0.045em;
 }
@@ -359,9 +434,42 @@ a:hover {
     font-size: 0.78rem;
 }
 
+@media (min-width: 576px) {
+    .article-container {
+        max-width: 540px;
+        padding-inline: 1.25rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .article-container {
+        max-width: 720px;
+        padding-inline: 1.5rem;
+    }
+}
+
 @media (min-width: 992px) {
+    .article-container {
+        max-width: 960px;
+        padding-inline: 2rem;
+    }
+
     .lead-column {
         border-right: 1px solid var(--color-rule);
+    }
+}
+
+@media (min-width: 1200px) {
+    .article-container {
+        max-width: 1140px;
+        padding-inline: 2.5rem;
+    }
+}
+
+@media (min-width: 1400px) {
+    .article-container {
+        max-width: 1280px;
+        padding-inline: 3rem;
     }
 }
 

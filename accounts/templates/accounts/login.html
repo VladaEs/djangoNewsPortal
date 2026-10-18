@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Увійти · {{ website_settings.site_name }}{% endblock %}
+
+{% block content %}
+<section class="auth-page py-5">
+    <div class="container">
+        <div class="auth-card mx-auto p-4 p-md-5">
+            <p class="editorial-kicker mb-2">Особистий кабінет</p>
+            <h1 class="mb-3">Увійти до порталу</h1>
+            <p class="text-secondary mb-4">Авторизуйтеся, щоб читати матеріали з обмеженим доступом.</p>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger rounded-0" role="alert">
+                    Неправильне ім’я користувача або пароль. Спробуйте ще раз.
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'accounts:login' %}" novalidate>
+                {% csrf_token %}
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                    {{ form.username }}
+                    {% for error in form.username.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                    {{ form.password }}
+                    {% for error in form.password.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+
+                <button class="btn btn-editorial btn-lg w-100 rounded-0" type="submit">Увійти</button>
+            </form>
+
+            <p class="auth-note small text-secondary mt-4 mb-0">
+                Ще не маєте облікового запису?
+                <a href="{% url 'accounts:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Зареєструватися</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

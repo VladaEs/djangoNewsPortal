@@ -13,7 +13,6 @@
             {% endfor %}
         </div>
         <h1 class="article-title my-3">{{ article.title }}</h1>
-        <p class="article-deck mb-0">{{ article.body|truncatewords:30 }}</p>
         {% include "articles/partials/article_meta.html" with article=article %}
     </header>
 
@@ -30,7 +29,10 @@
                     <span aria-hidden="true">●</span>
                     <h2 class="mt-2">Матеріал для зареєстрованих читачів</h2>
                     <p>Увійдіть до облікового запису, щоб прочитати повну версію.</p>
-                    <a class="btn btn-editorial rounded-0" href="{% url 'admin:login' %}?next={{ request.path }}">Увійти</a>
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+                        <a class="btn btn-editorial rounded-0" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Увійти</a>
+                        <a class="btn btn-outline-editorial rounded-0" href="{% url 'accounts:register' %}?next={{ request.path|urlencode }}">Зареєструватися</a>
+                    </div>
                 </aside>
             {% else %}
                 {{ article.body|linebreaks }}
