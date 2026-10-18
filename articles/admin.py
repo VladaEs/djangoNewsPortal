@@ -1,6 +1,30 @@
 from django.contrib import admin
 
-from .models import Article, Tag
+from .models import Article, Tag, WebsiteSettings
+
+
+@admin.register(WebsiteSettings)
+class WebsiteSettingsAdmin(admin.ModelAdmin):
+    fieldsets = (
+        ("Identity", {"fields": ("site_name", "tagline")}),
+        (
+            "Appearance",
+            {
+                "fields": (
+                    "background_color",
+                    "text_color",
+                    "accent_color",
+                    "base_font_size",
+                )
+            },
+        ),
+    )
+
+    def has_add_permission(self, request):
+        return not WebsiteSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Tag)

@@ -1,0 +1,11 @@
+<div class="article-meta d-flex flex-wrap align-items-center gap-2 mt-3">
+    <span>
+        {% if article.author %}
+            {{ article.author.get_full_name|default:article.author.username }}
+        {% else %} Редакція
+        {% endif %}</span>
+    {% if article.published_at %}
+        <time datetime="{{ article.published_at|date:'c' }}">{{ article.published_at|date:"j F, H:i" }}</time>
+    {% endif %}
+    {% if article.access_level == "registered" %}<span class="access-badge">Для читачів</span>{% endif %}
+</div>

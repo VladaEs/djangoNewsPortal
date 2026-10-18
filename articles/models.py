@@ -1,5 +1,57 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
+
+
+hex_color_validator = RegexValidator(
+    regex=r"^#[0-9A-Fa-f]{6}$",
+    message="Enter a color in #RRGGBB format.",
+)
+
+
+class WebsiteSettings(models.Model):
+    site_name = models.CharField(max_length=100, default="Міський Вісник")
+    tagline = models.CharField(
+        max_length=200,
+        default="Новини, що тримають місто разом",
+    )
+    background_color = models.CharField(
+        max_length=7,
+        default="#F4F1EA",
+        validators=[hex_color_validator],
+    )
+    text_color = models.CharField(
+        max_length=7,
+        default="#171717",
+        validators=[hex_color_validator],
+    )
+    accent_color = models.CharField(
+        max_length=7,
+        default="#A51C30",
+        validators=[hex_color_validator],
+    )
+    base_font_size = models.PositiveSmallIntegerField(
+        default=16,
+        validators=[MinValueValidator(14), MaxValueValidator(22)],
+        help_text="Base font size in pixels (14–22).",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "website settings"
+        verbose_name_plural = "website settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return self.site_name
 
 
 class Tag(models.Model):
@@ -21,17 +73,17 @@ class Tag(models.Model):
 
 class Article(models.Model):
     class ContentType(models.TextChoices):
-        NEWS = "news", "News"
-        ARTICLE = "article", "Article"
+        NEWS = "news", "Новина"
+        ARTICLE = "article", "Стаття"
 
     class Status(models.TextChoices):
-        DRAFT = "draft", "Draft"
-        PUBLISHED = "published", "Published"
-        ARCHIVED = "archived", "Archived"
+        DRAFT = "draft", "Чернетка"
+        PUBLISHED = "published", "Опубліковано"
+        ARCHIVED = "archived", "В архіві"
 
     class AccessLevel(models.TextChoices):
-        PUBLIC = "public", "Public"
-        REGISTERED = "registered", "Registered users only"
+        PUBLIC = "public", "Публічний"
+        REGISTERED = "registered", "Лише для зареєстрованих"
 
     title = models.CharField(max_length=255)
     slug = models.SlugField(

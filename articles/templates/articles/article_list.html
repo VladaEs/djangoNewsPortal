@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if query %}Пошук: {{ query }} · {% endif %}{{ website_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    {% if query %}
+        <div class="mb-5">
+            <p class="editorial-kicker mb-2">Результати пошуку</p>
+            <h1 class="display-title mb-0">Матеріали за запитом «{{ query }}»</h1>
+        </div>
+    {% elif selected_tag %}
+        <div class="mb-5">
+            <p class="editorial-kicker mb-2">Тематична добірка</p>
+            <h1 class="display-title mb-0">Останні матеріали розділу</h1>
+        </div>
+    {% endif %}
+
+    {% if featured_article %}
+        <section aria-labelledby="lead-heading">
+            <h1 class="section-heading mb-4" id="lead-heading">Головне сьогодні</h1>
+
+            <div class="row g-4">
+                <div class="col-lg-8 lead-column pe-lg-4">
+                    <article class="lead-story">
+                        <a class="lead-story__image d-block ratio ratio-16x9 overflow-hidden" href="{% url 'articles:article_detail' featured_article.slug %}">
+                            <img class="w-100 h-100" src="{% static 'articles/images/city-news-hero.png' %}" alt="Ранковий вид сучасного міського центру">
+                        </a>
+                        <div class="pt-4">
+                            <p class="editorial-kicker mb-2">{{ featured_article.get_content_type_display }}</p>
+                            <h2><a class="text-decoration-none" href="{% url 'articles:article_detail' featured_article.slug %}">{{ featured_article.title }}</a></h2>
+                            <p class="story-summary mt-3 mb-0">{{ featured_article.body|truncatewords:32 }}</p>
+                            {% include "articles/partials/article_meta.html" with article=featured_article %}
+                        </div>
+                    </article>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="d-flex flex-column h-100">
+                        {% for article in secondary_articles %}
+                            <article class="side-story flex-grow-1 py-3{% if forloop.first %} pt-lg-0{% endif %}">
+                                <p class="editorial-kicker mb-2">{{ article.get_content_type_display }}</p>
+                                <h2><a class="text-decoration-none" href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a></h2>
+                                <p class="text-secondary mt-3">{{ article.body|truncatewords:20 }}</p>
+                                {% include "articles/partials/article_meta.html" with article=article %}
+                            </article>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {% if latest_articles %}
+            <section class="mt-5 pt-4" aria-labelledby="latest-heading">
+                <div class="d-flex align-items-end justify-content-between gap-3 section-title-row">
+                    <h2 class="section-heading flex-grow-1 mb-0" id="latest-heading">Останні новини</h2>
+                    <span class="d-none d-sm-inline pb-2 text-secondary small text-uppercase">Оновлюється протягом дня</span>
+                </div>
+
+                <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 pt-4">
+                    {% for article in latest_articles %}
+                        <div class="col">
+                            <article class="news-card h-100 pt-3">
+                                <div class="d-flex flex-wrap gap-2 editorial-kicker mb-2">
+                                    {% for tag in article.tags.all %}<span>{{ tag.name }}</span>{% endfor %}
+                                </div>
+                                <h3><a class="text-decoration-none" href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a></h3>
+                                <p class="text-secondary mt-3">{{ article.body|truncatewords:22 }}</p>
+                                {% include "articles/partials/article_meta.html" with article=article %}
+                            </article>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    {% else %}
+        <section class="editorial-panel mx-auto my-5 p-4 p-md-5 border text-center">
+            <p class="editorial-kicker mb-2">Архів редакції</p>
+            <h1 class="display-title">Матеріалів не знайдено</h1>
+            <p class="text-secondary">Спробуйте інший пошуковий запит або поверніться на головну сторінку.</p>
+            <a class="btn btn-editorial rounded-0" href="{% url 'articles:article_list' %}">На головну</a>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}

@@ -21,6 +21,16 @@ To create an administrator account:
 docker compose exec web python manage.py createsuperuser
 ```
 
+To add the fictional local-news dataset used by the demo homepage:
+
+```powershell
+docker compose exec web python manage.py seed_demo_news
+```
+
+The command can be run repeatedly; it does not duplicate existing demo news.
+Site identity, colors, and base font size can be changed in Django Admin under
+**Website settings**.
+
 To stop the containers:
 
 ```powershell
