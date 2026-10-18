@@ -1,0 +1,44 @@
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-news}
+      MYSQL_USER: ${MYSQL_USER:-news}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-news-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  web:
+    build: .
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-development-only-change-me}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,[::1]}
+      DB_ENGINE: mysql
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-news}
+      MYSQL_USER: ${MYSQL_USER:-news}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-news-password}
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+    ports:
+      - "${DJANGO_PORT:-8000}:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
