@@ -25,12 +25,19 @@ def article_list(request):
     #search query and selected tag filtering
     query = request.GET.get("q", "").strip()
     selected_tag = request.GET.get("tag", "").strip()
+    sort = request.GET.get("sort", "new_first")
 
     if query:
         articles = articles.filter(Q(title__icontains=query) | Q(body__icontains=query))
 
     if selected_tag:
         articles = articles.filter(tags__slug=selected_tag)
+
+    if sort == "old_first":
+        articles = articles.order_by("published_at", "created_at")
+    else:
+        sort = "new_first"
+        articles = articles.order_by("-published_at", "-created_at")
 
     article_list = list(articles.distinct()[:12])
 
@@ -43,6 +50,7 @@ def article_list(request):
             "latest_articles": article_list[3:],
             "query": query,
             "selected_tag": selected_tag,
+            "sort": sort,
         },
     )
 
