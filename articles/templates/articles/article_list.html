@@ -20,18 +20,21 @@
 
     {% if featured_article %}
         <section aria-labelledby="lead-heading">
-            <div class="section-title-row d-flex align-items-end justify-content-between gap-3 mb-4">
+            <div class="section-title-row d-flex flex-column flex-md-row align-items-stretch align-items-md-end justify-content-between gap-3 mb-4">
                 <h1 class="section-heading flex-grow-1 mb-0" id="lead-heading">Головне сьогодні</h1>
-                <form method="get" class="d-flex align-items-end gap-2">
-                    {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
-                    {% if selected_tag %}<input type="hidden" name="tag" value="{{ selected_tag }}">{% endif %}
-                    <div>
-                        <label class="visually-hidden" for="lead-filter">Сортування новин</label>
-                        <select name="sort" class="form-select lead-section-filter" id="lead-filter">
-                            <option value="new_first"{% if sort == "new_first" %} selected{% endif %}>Спочатку нові</option>
-                            <option value="old_first"{% if sort == "old_first" %} selected{% endif %}>Спочатку старі</option>
-                        </select>
-                    </div>
+                <form action="{% url 'articles:article_list' %}" method="get" class="article-sort-form d-flex flex-column flex-sm-row align-items-stretch gap-2 pb-md-2">
+                    <label class="visually-hidden" for="lead-filter">Сортування новин</label>
+                    <select name="sort" class="form-select lead-section-filter" id="lead-filter">
+                        <option value="new_first"{% if sort == "new_first" %} selected{% endif %}>Спочатку нові</option>
+                        <option value="old_first"{% if sort == "old_first" %} selected{% endif %}>Спочатку старі</option>
+                    </select>
+                    {% for parameter, values in request.GET.lists %}
+                        {% if parameter != "sort" %}
+                            {% for value in values %}
+                                <input type="hidden" name="{{ parameter }}" value="{{ value }}">
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
                     <button class="btn btn-editorial rounded-0" type="submit">Застосувати</button>
                 </form>
             </div>
@@ -99,7 +102,6 @@
     {% endif %}
 </div>
 {% endblock %}
-
 {% block page_scripts %}
     <script src="{% static 'articles/js/article-list.js' %}" defer></script>
 {% endblock %}

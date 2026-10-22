@@ -1,8 +1,9 @@
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .models import Article
+from .utils import build_url
 
 
 def article_list(request):
@@ -27,6 +28,9 @@ def article_list(request):
     selected_tag = request.GET.get("tag", "").strip()
     sort = request.GET.get("sort", "new_first")
 
+    if sort not in {"new_first", "old_first"}:
+        return redirect(build_url(request, sort="new_first"))
+
     if query:
         articles = articles.filter(Q(title__icontains=query) | Q(body__icontains=query))
 
@@ -36,7 +40,6 @@ def article_list(request):
     if sort == "old_first":
         articles = articles.order_by("published_at", "created_at")
     else:
-        sort = "new_first"
         articles = articles.order_by("-published_at", "-created_at")
 
     article_list = list(articles.distinct()[:12])
