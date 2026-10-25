@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Article, Tag, WebsiteSettings
+from .models import Article, Comment, Tag, WebsiteSettings
 
 
 @admin.register(WebsiteSettings)
@@ -50,3 +50,22 @@ class ArticleAdmin(admin.ModelAdmin):
     autocomplete_fields = ("author", "tags")
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "published_at"
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ("article", "user", "status", "created_at")
+    list_filter = ("status", "created_at")
+    list_select_related = ("article", "user")
+    search_fields = ("body", "article__title", "user__username")
+    autocomplete_fields = ("article", "user")
+    readonly_fields = ("created_at",)
+    actions = ("approve_comments", "reject_comments")
+
+    @admin.action(description="Схвалити вибрані коментарі")
+    def approve_comments(self, request, queryset):
+        queryset.update(status=Comment.Status.APPROVED)
+
+    @admin.action(description="Відхилити вибрані коментарі")
+    def reject_comments(self, request, queryset):
+        queryset.update(status=Comment.Status.REJECTED)

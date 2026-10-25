@@ -168,3 +168,43 @@ class SavedArticle(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.article}"
+
+
+class Comment(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Очікує модерації"
+        APPROVED = "approved", "Схвалено"
+        REJECTED = "rejected", "Відхилено"
+
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE,
+        related_name="comments",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="comments",
+    )
+    body = models.TextField(max_length=2000)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["article", "status", "-created_at"],
+                name="comment_article_status_idx",
+            ),
+        ]
+        verbose_name = "comment"
+        verbose_name_plural = "comments"
+
+    def __str__(self):
+        return f"{self.user}: {self.body[:50]}"

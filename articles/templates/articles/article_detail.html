@@ -64,6 +64,79 @@
         </div>
     </div>
 
+    <section class="container article-container mt-5 pt-4" id="comments" aria-labelledby="comments-heading">
+        <h2 class="section-heading mb-0" id="comments-heading">
+            Коментарі
+            <span class="comments-count">{{ comments_page.paginator.count }}</span>
+        </h2>
+
+        {% if comments_page.object_list %}
+            <div class="comment-list">
+                {% for comment in comments_page %}
+                    <article class="comment-item py-4 border-bottom">
+                        <header class="d-flex flex-column flex-sm-row justify-content-between gap-1 gap-sm-3">
+                            <strong class="comment-author">
+                                {{ comment.user.get_full_name|default:comment.user.username }}
+                            </strong>
+                            <time class="small text-secondary" datetime="{{ comment.created_at|date:'c' }}">
+                                {{ comment.created_at|date:"j F Y, H:i" }}
+                            </time>
+                        </header>
+                        <div class="comment-body mt-2">{{ comment.body|linebreaksbr }}</div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-secondary py-4 mb-0">Ще немає схвалених коментарів.</p>
+        {% endif %}
+
+        {% if comments_page.has_other_pages %}
+            <nav class="comment-pagination d-flex justify-content-between align-items-center gap-3 py-4" aria-label="Сторінки коментарів">
+                {% if comments_page.has_previous %}
+                    <a href="?comments_page={{ comments_page.previous_page_number }}#comments">← Новіші</a>
+                {% else %}
+                    <span></span>
+                {% endif %}
+
+                <span class="text-secondary">
+                    Сторінка {{ comments_page.number }} із {{ comments_page.paginator.num_pages }}
+                </span>
+
+                {% if comments_page.has_next %}
+                    <a href="?comments_page={{ comments_page.next_page_number }}#comments">Старіші →</a>
+                {% else %}
+                    <span></span>
+                {% endif %}
+            </nav>
+        {% endif %}
+
+        <div class="comment-form border p-4 p-md-5 mt-4" id="comment-form">
+            <h3 class="related-title mb-3">Залишити коментар</h3>
+
+            {% if user.is_authenticated %}
+                <form method="post" action="{% url 'articles:article_comment_create' article.slug %}">
+                    {% csrf_token %}
+                    <label class="form-label fw-bold" for="{{ comment_form.body.id_for_label }}">
+                        {{ comment_form.body.label }}
+                    </label>
+                    {{ comment_form.body }}
+                    {% for error in comment_form.body.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-3 mt-3">
+                        <button class="btn btn-editorial rounded-0" type="submit">Надіслати коментар</button>
+                        <p class="small text-secondary mb-0">Коментар з’явиться після модерації.</p>
+                    </div>
+                </form>
+            {% else %}
+                <p class="text-secondary">Коментувати можуть лише авторизовані користувачі.</p>
+                <a class="btn btn-outline-editorial rounded-0" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">
+                    Увійти, щоб коментувати
+                </a>
+            {% endif %}
+        </div>
+    </section>
+
     {% if related_articles %}
         <section class="container article-container mt-5 pt-4">
             <h2 class="section-heading mb-4">Читайте також</h2>

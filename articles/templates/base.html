@@ -72,6 +72,15 @@
     </header>
 
     <main class="flex-grow-1" id="main-content">
+        {% if messages %}
+            <div class="container pt-3" aria-live="polite">
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags|default:'info' }}{% endif %} rounded-0 mb-2" role="status">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
         {% block content %}{% endblock %}
     </main>
 

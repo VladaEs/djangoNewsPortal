@@ -17,5 +17,10 @@ urlpatterns = [
         views.article_remove_from_saved,
         name="article_remove_from_saved",
     ),
+    path(
+        "articles/<str:slug>/comments/add/",
+        views.article_comment_create,
+        name="article_comment_create",
+    ),
     path("articles/<str:slug>/", views.article_detail, name="article_detail"),
 ]

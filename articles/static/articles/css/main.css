@@ -440,6 +440,50 @@ a:hover {
     line-height: 1.15;
 }
 
+.comments-count {
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 400;
+    vertical-align: middle;
+}
+
+.comment-item {
+    border-color: var(--color-rule) !important;
+}
+
+.comment-author {
+    color: var(--color-accent);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.comment-body {
+    overflow-wrap: anywhere;
+}
+
+.comment-pagination {
+    font-size: 0.85rem;
+}
+
+.comment-form {
+    border-color: var(--color-rule) !important;
+    background: var(--color-surface);
+}
+
+.comment-form .form-control {
+    border-color: var(--color-rule);
+    background: #fff;
+    color: var(--color-text);
+    resize: vertical;
+}
+
+.comment-form .form-control:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 0.2rem rgb(165 28 48 / 14%);
+}
+
 .site-footer {
     background: var(--color-dark);
     color: #c7cbd0;

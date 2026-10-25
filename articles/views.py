@@ -1,12 +1,19 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .models import Article, SavedArticle
+from .forms import CommentForm
+from .models import Article, Comment, SavedArticle
 from .utils import build_url
+
+
+COMMENTS_PER_PAGE = 10
 
 
 def article_list(request):
@@ -89,6 +96,13 @@ def article_detail(request, slug):
         .select_related("author")
         .distinct()[:3]
     )
+    comments = article.comments.filter(
+        status=Comment.Status.APPROVED,
+    ).select_related("user")
+    comments_page = Paginator(
+        comments,
+        COMMENTS_PER_PAGE,
+    ).get_page(request.GET.get("comments_page"))
 
     return render(
         request,
@@ -98,8 +112,48 @@ def article_detail(request, slug):
             "is_locked": is_locked,
             "is_saved": is_saved,
             "related_articles": related_articles,
+            "comments_page": comments_page,
+            "comment_form": CommentForm(),
         },
     )
+
+
+@login_required
+@require_POST
+def article_comment_create(request, slug):
+    article = get_object_or_404(
+        Article,
+        slug=slug,
+        status=Article.Status.PUBLISHED,
+        published_at__lte=timezone.now(),
+    )
+    form = CommentForm(request.POST)
+
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.article = article
+        comment.user = request.user
+        comment.save()
+        messages.success(
+            request,
+            "Ваш коментар надіслано на модерацію.",
+        )
+
+        article_url = reverse(
+            "articles:article_detail",
+            kwargs={"slug": article.slug},
+        )
+        return redirect(f"{article_url}#comments")
+
+    messages.error(
+        request,
+        "Не вдалося додати коментар. Перевірте введений текст.",
+    )
+    article_url = reverse(
+        "articles:article_detail",
+        kwargs={"slug": article.slug},
+    )
+    return redirect(f"{article_url}#comment-form")
 
 
 @login_required

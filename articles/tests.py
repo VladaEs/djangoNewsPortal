@@ -1,11 +1,12 @@
 from datetime import timedelta
 
+from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Article, SavedArticle, Tag, WebsiteSettings
+from .models import Article, Comment, SavedArticle, Tag, WebsiteSettings
 from .utils import build_url
 
 
@@ -266,4 +267,121 @@ class ArticlePageTests(TestCase):
                 user=other_user,
                 article=self.public_article,
             ).exists()
+        )
+
+    def test_article_displays_only_approved_comments(self):
+        approved_comment = Comment.objects.create(
+            article=self.public_article,
+            user=self.user,
+            body="Схвалений коментар до статті.",
+            status=Comment.Status.APPROVED,
+        )
+        pending_comment = Comment.objects.create(
+            article=self.public_article,
+            user=self.user,
+            body="Коментар, який очікує модерації.",
+        )
+        rejected_comment = Comment.objects.create(
+            article=self.public_article,
+            user=self.user,
+            body="Відхилений коментар.",
+            status=Comment.Status.REJECTED,
+        )
+
+        response = self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertContains(response, approved_comment.body)
+        self.assertNotContains(response, pending_comment.body)
+        self.assertNotContains(response, rejected_comment.body)
+
+    def test_authenticated_user_can_submit_comment_for_moderation(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse(
+                "articles:article_comment_create",
+                kwargs={"slug": self.public_article.slug},
+            ),
+            {"body": "Новий коментар читача."},
+        )
+
+        expected_url = reverse(
+            "articles:article_detail",
+            kwargs={"slug": self.public_article.slug},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{expected_url}#comments")
+        comment = Comment.objects.get()
+        self.assertEqual(comment.user, self.user)
+        self.assertEqual(comment.article, self.public_article)
+        self.assertEqual(comment.body, "Новий коментар читача.")
+        self.assertEqual(comment.status, Comment.Status.PENDING)
+
+    def test_anonymous_user_cannot_submit_comment(self):
+        response = self.client.post(
+            reverse(
+                "articles:article_comment_create",
+                kwargs={"slug": self.public_article.slug},
+            ),
+            {"body": "Анонімний коментар."},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+        self.assertFalse(Comment.objects.exists())
+
+    def test_comment_form_requires_csrf_token(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+
+        response = csrf_client.post(
+            reverse(
+                "articles:article_comment_create",
+                kwargs={"slug": self.public_article.slug},
+            ),
+            {"body": "Коментар без CSRF-токена."},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Comment.objects.exists())
+
+    def test_approved_comments_are_paginated(self):
+        for number in range(11):
+            Comment.objects.create(
+                article=self.public_article,
+                user=self.user,
+                body=f"Схвалений коментар номер {number}.",
+                status=Comment.Status.APPROVED,
+            )
+
+        response = self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            ),
+            {"comments_page": 2},
+        )
+
+        comments_page = response.context["comments_page"]
+        self.assertEqual(comments_page.paginator.count, 11)
+        self.assertEqual(comments_page.paginator.num_pages, 2)
+        self.assertEqual(len(comments_page.object_list), 1)
+
+    def test_comment_admin_allows_superuser_to_delete_comments(self):
+        superuser = get_user_model().objects.create_superuser(
+            username="portal-admin",
+            email="admin@example.com",
+            password="admin-password",
+        )
+        request = RequestFactory().get("/admin/articles/comment/")
+        request.user = superuser
+
+        self.assertIn(Comment, admin.site._registry)
+        self.assertTrue(
+            admin.site._registry[Comment].has_delete_permission(request)
         )
