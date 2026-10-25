@@ -23,10 +23,12 @@
     <div class="utility-bar py-2">
         <div class="container d-flex align-items-center justify-content-between gap-3">
             <span>{% now "j F Y" %}</span>
-            <span class="d-none d-md-inline">Міське видання · Демо</span>
+            <span class="d-none d-md-inline">Міське видання</span>
             <div class="d-flex align-items-center gap-3">
                 {% if request.user.is_authenticated %}
-                    <span class="d-none d-sm-inline">{{ request.user.username }}</span>
+                    <span class="d-none d-sm-inline">
+                        <a href="{% url 'accounts:profile' %}">{{ request.user.username }}</a>
+                    </span>
                     <form class="m-0" method="post" action="{% url 'accounts:logout' %}">
                         {% csrf_token %}
                         <button class="utility-action p-0" type="submit">Вийти</button>

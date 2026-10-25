@@ -14,6 +14,30 @@
         </div>
         <h1 class="article-title my-3">{{ article.title }}</h1>
         {% include "articles/partials/article_meta.html" with article=article %}
+
+        <div class="mt-4">
+            {% if user.is_authenticated %}
+                {% if is_saved %}
+                    <form method="post" action="{% url 'articles:article_remove_from_saved' article.slug %}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-editorial rounded-0" type="submit">
+                            Видалити зі збережених
+                        </button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{% url 'articles:article_save_for_later' article.slug %}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-editorial rounded-0" type="submit">
+                            Зберегти для читання
+                        </button>
+                    </form>
+                {% endif %}
+            {% else %}
+                <a class="btn btn-outline-editorial rounded-0" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">
+                    Увійти, щоб зберегти
+                </a>
+            {% endif %}
+        </div>
     </header>
 
     <figure class="container mt-5 mb-0">

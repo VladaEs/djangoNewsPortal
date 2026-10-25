@@ -1,8 +1,11 @@
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 
-from .models import Article
+from .models import Article, SavedArticle
 from .utils import build_url
 
 
@@ -69,6 +72,13 @@ def article_detail(request, slug):
         article.access_level == Article.AccessLevel.REGISTERED
         and not request.user.is_authenticated
     )
+    is_saved = (
+        request.user.is_authenticated
+        and SavedArticle.objects.filter(
+            user=request.user,
+            article=article,
+        ).exists()
+    )
     related_articles = (
         Article.objects.filter(
             status=Article.Status.PUBLISHED,
@@ -86,6 +96,49 @@ def article_detail(request, slug):
         {
             "article": article,
             "is_locked": is_locked,
+            "is_saved": is_saved,
             "related_articles": related_articles,
         },
     )
+
+
+@login_required
+@require_POST
+def article_save_for_later(request, slug):
+    article = get_object_or_404(
+        Article,
+        slug=slug,
+        status=Article.Status.PUBLISHED,
+        published_at__lte=timezone.now(),
+    )
+    SavedArticle.objects.get_or_create(
+        article=article,
+        user=request.user,
+    )
+
+    return redirect("articles:article_detail", slug=article.slug)
+
+
+@login_required
+@require_POST
+def article_remove_from_saved(request, slug):
+    article = get_object_or_404(
+        Article,
+        slug=slug,
+        status=Article.Status.PUBLISHED,
+        published_at__lte=timezone.now(),
+    )
+    SavedArticle.objects.filter(
+        article=article,
+        user=request.user,
+    ).delete()
+
+    next_url = request.POST.get("next", "")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+
+    return redirect("articles:article_detail", slug=article.slug)

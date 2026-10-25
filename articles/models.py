@@ -140,3 +140,31 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class SavedArticle(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="saved_articles",
+    )
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE,
+        related_name="saved_by_users",
+    )
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-saved_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "article"],
+                name="unique_saved_article_per_user",
+            ),
+        ]
+        verbose_name = "saved article"
+        verbose_name_plural = "saved articles"
+
+    def __str__(self):
+        return f"{self.user} — {self.article}"

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Особистий кабінет{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1>Особистий кабінет</h1>
+
+            <div class="border-top border-bottom py-4 my-4">
+                <p>
+                    <strong>Ім’я користувача:</strong>
+                    {{ request.user.username }}
+                </p>
+
+                <p>
+                    <strong>Email:</strong>
+                    {{ request.user.email|default:"Не вказано" }}
+                </p>
+            </div>
+
+            <section aria-labelledby="saved-articles-heading">
+                <h2 class="section-heading mb-4" id="saved-articles-heading">Збережені статті</h2>
+
+                {% if saved_articles %}
+                    <div class="list-group list-group-flush border-top">
+                        {% for saved in saved_articles %}
+                            <div class="list-group-item bg-transparent px-0 py-4">
+                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-3">
+                                    <a
+                                        class="text-decoration-none flex-grow-1"
+                                        href="{% url 'articles:article_detail' saved.article.slug %}"
+                                    >
+                                        <p class="editorial-kicker mb-2">
+                                            {{ saved.article.get_content_type_display }}
+                                        </p>
+
+                                        <h3 class="related-title mb-2">
+                                            {{ saved.article.title }}
+                                        </h3>
+
+                                        {% include "articles/partials/article_meta.html" with article=saved.article %}
+
+                                        <p class="small text-secondary mt-2 mb-0">
+                                            Збережено {{ saved.saved_at|date:"j F Y, H:i" }}
+                                        </p>
+                                    </a>
+
+                                    <form
+                                        class="d-grid flex-shrink-0"
+                                        method="post"
+                                        action="{% url 'articles:article_remove_from_saved' saved.article.slug %}"
+                                    >
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{% url 'accounts:profile' %}">
+                                        <button class="btn btn-sm btn-outline-editorial rounded-0" type="submit">
+                                            Видалити зі збережених
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-secondary">
+                        Тут пізніше з’являться матеріали, збережені для читання.
+                    </p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

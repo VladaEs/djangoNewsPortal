@@ -5,7 +5,7 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Article, Tag, WebsiteSettings
+from .models import Article, SavedArticle, Tag, WebsiteSettings
 from .utils import build_url
 
 
@@ -140,3 +140,130 @@ class ArticlePageTests(TestCase):
         )
 
         self.assertContains(response, "PRIVATE_ENDING")
+
+    def test_authenticated_user_can_save_article_for_later(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse(
+                "articles:article_save_for_later",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            ),
+        )
+        self.assertTrue(
+            SavedArticle.objects.filter(
+                user=self.user,
+                article=self.public_article,
+            ).exists()
+        )
+
+    def test_saving_the_same_article_twice_does_not_create_duplicate(self):
+        self.client.force_login(self.user)
+        save_url = reverse(
+            "articles:article_save_for_later",
+            kwargs={"slug": self.public_article.slug},
+        )
+
+        self.client.post(save_url)
+        self.client.post(save_url)
+
+        self.assertEqual(
+            SavedArticle.objects.filter(
+                user=self.user,
+                article=self.public_article,
+            ).count(),
+            1,
+        )
+
+    def test_anonymous_user_cannot_save_article(self):
+        response = self.client.post(
+            reverse(
+                "articles:article_save_for_later",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+        self.assertFalse(SavedArticle.objects.exists())
+
+    def test_saved_article_page_shows_saved_state(self):
+        SavedArticle.objects.create(
+            user=self.user,
+            article=self.public_article,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertContains(response, "Видалити зі збережених")
+
+    def test_authenticated_user_can_remove_article_from_saved(self):
+        SavedArticle.objects.create(
+            user=self.user,
+            article=self.public_article,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse(
+                "articles:article_remove_from_saved",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            ),
+        )
+        self.assertFalse(
+            SavedArticle.objects.filter(
+                user=self.user,
+                article=self.public_article,
+            ).exists()
+        )
+
+    def test_removing_article_does_not_delete_another_users_save(self):
+        other_user = get_user_model().objects.create_user(
+            username="another-reader",
+            password="test-password",
+        )
+        SavedArticle.objects.create(
+            user=self.user,
+            article=self.public_article,
+        )
+        SavedArticle.objects.create(
+            user=other_user,
+            article=self.public_article,
+        )
+        self.client.force_login(self.user)
+
+        self.client.post(
+            reverse(
+                "articles:article_remove_from_saved",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertTrue(
+            SavedArticle.objects.filter(
+                user=other_user,
+                article=self.public_article,
+            ).exists()
+        )
