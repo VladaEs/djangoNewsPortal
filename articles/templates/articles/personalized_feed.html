@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Для вас · {{ website_settings.site_name }}{% endblock %}
+
+{% block content %}
+<section class="container article-container py-5">
+    <header class="mb-5">
+        <p class="editorial-kicker mb-2">Персональна стрічка</p>
+        <h1 class="display-title mb-3">Для вас</h1>
+        <p class="story-summary mb-0">
+            Ваші останні перегляди та матеріали, з яких починається персональна добірка.
+        </p>
+    </header>
+
+    {% if view_history %}
+        <h2 class="section-heading mb-0">Останні перегляди</h2>
+        <div class="list-group list-group-flush">
+            {% for article_view in view_history %}
+                <a
+                    class="list-group-item list-group-item-action bg-transparent px-0 py-4"
+                    href="{% url 'articles:article_detail' article_view.article.slug %}"
+                >
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <p class="editorial-kicker mb-2">
+                                {{ article_view.article.get_content_type_display }}
+                            </p>
+                            <h3 class="related-title mb-2">{{ article_view.article.title }}</h3>
+                            {% include "articles/partials/article_meta.html" with article=article_view.article %}
+                            <p class="small text-secondary mt-2 mb-0">
+                                Переглянуто {{ article_view.viewed_at|date:"j F Y, H:i" }}
+                            </p>
+                        </div>
+                        <span class="fs-4 text-secondary" aria-hidden="true">→</span>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="mb-4">
+            <h2 class="section-heading mb-3">Почніть зі свіжих матеріалів</h2>
+            <p class="text-secondary">
+                Історія переглядів поки порожня. Відкрийте кілька статей, щоб ми могли сформувати вашу добірку.
+            </p>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 g-4">
+            {% for article in latest_articles %}
+                <div class="col">
+                    <article class="news-card h-100 pt-3">
+                        <p class="editorial-kicker mb-2">{{ article.get_content_type_display }}</p>
+                        <h3>
+                            <a class="text-decoration-none" href="{% url 'articles:article_detail' article.slug %}">
+                                {{ article.title }}
+                            </a>
+                        </h3>
+                        {% include "articles/partials/article_meta.html" with article=article %}
+                    </article>
+                </div>
+            {% empty %}
+                <p class="text-secondary">Опублікованих матеріалів поки немає.</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

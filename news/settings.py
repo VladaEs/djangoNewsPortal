@@ -160,5 +160,5 @@ MAILERS = {
 
 AUTH_USER_MODEL = "accounts.User"
 
-LOGIN_REDIRECT_URL = "articles:article_list"
+LOGIN_REDIRECT_URL = "articles:personalized_feed"
 LOGOUT_REDIRECT_URL = "articles:article_list"

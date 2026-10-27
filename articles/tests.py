@@ -163,6 +163,48 @@ class ArticlePageTests(TestCase):
         self.assertContains(response, 'name="q" value="міська"')
         self.assertContains(response, 'name="page" value="2"')
 
+    def test_personalized_feed_requires_authentication(self):
+        response = self.client.get(reverse("articles:personalized_feed"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+        self.assertIn("next=/feed/", response.url)
+
+    def test_personalized_feed_uses_only_current_users_history(self):
+        other_user = get_user_model().objects.create_user(
+            username="feed-outsider",
+            password="test-password",
+        )
+        ArticleView.objects.create(
+            user=self.user,
+            article=self.public_article,
+        )
+        ArticleView.objects.create(
+            user=self.user,
+            article=self.public_article,
+        )
+        ArticleView.objects.create(
+            user=other_user,
+            article=self.old_article,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("articles:personalized_feed"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["view_history"]), 1)
+        self.assertContains(response, self.public_article.title)
+        self.assertNotContains(response, self.old_article.title)
+
+    def test_personalized_feed_falls_back_to_latest_articles(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("articles:personalized_feed"))
+
+        self.assertFalse(response.context["view_history"])
+        self.assertContains(response, "Почніть зі свіжих матеріалів")
+        self.assertContains(response, self.public_article.title)
+
     def test_restricted_article_hides_full_body_from_anonymous_user(self):
         response = self.client.get(
             reverse(

@@ -7,6 +7,7 @@ app_name = "articles"
 
 urlpatterns = [
     path("", views.article_list, name="article_list"),
+    path("feed/", views.personalized_feed, name="personalized_feed"),
     path(
         "articles/<str:slug>/save/",
         views.article_save_for_later,

@@ -34,8 +34,8 @@
                         <button class="utility-action p-0" type="submit">Вийти</button>
                     </form>
                 {% else %}
-                    <a class="d-none d-sm-inline" href="{% url 'accounts:register' %}?next={{ request.path|urlencode }}">Реєстрація</a>
-                    <a href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Увійти</a>
+                    <a class="d-none d-sm-inline" href="{% url 'accounts:register' %}">Реєстрація</a>
+                    <a href="{% url 'accounts:login' %}">Увійти</a>
                 {% endif %}
                 {% if request.user.is_staff %}
                     <a href="{% url 'admin:index' %}">Адмінпанель</a>
@@ -63,7 +63,10 @@
 
         <nav class="section-nav border-top" aria-label="Розділи порталу">
             <div class="container d-flex overflow-x-auto px-0">
-                <a class="text-decoration-none{% if not selected_tag %} is-active{% endif %}" href="{% url 'articles:article_list' %}">Головна</a>
+                <a class="text-decoration-none{% if not selected_tag and not is_personalized_feed %} is-active{% endif %}" href="{% url 'articles:article_list' %}">Головна</a>
+                {% if request.user.is_authenticated %}
+                    <a class="text-decoration-none{% if is_personalized_feed %} is-active{% endif %}" href="{% url 'articles:personalized_feed' %}">Для вас</a>
+                {% endif %}
                 {% for tag in navigation_tags %}
                     <a class="text-decoration-none{% if selected_tag == tag.slug %} is-active{% endif %}" href="{% url 'articles:article_list' %}?tag={{ tag.slug }}">{{ tag.name }}</a>
                 {% endfor %}

@@ -41,6 +41,20 @@ class AuthenticationPageTests(TestCase):
         )
         self.assertFalse(self.user.is_staff)
 
+    def test_normal_login_without_next_redirects_to_personalized_feed(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            {
+                "username": self.user.username,
+                "password": "reader-password",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("articles:personalized_feed"),
+        )
+
     def test_invalid_credentials_show_an_error(self):
         response = self.client.post(
             reverse("accounts:login"),
@@ -113,7 +127,10 @@ class AuthenticationPageTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("articles:article_list"))
+        self.assertRedirects(
+            response,
+            reverse("articles:personalized_feed"),
+        )
 
 
 class ProfilePageTests(TestCase):
