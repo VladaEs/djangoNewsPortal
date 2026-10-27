@@ -208,3 +208,38 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"{self.user}: {self.body[:50]}"
+
+
+class ArticleView(models.Model):
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE,
+        related_name="views",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="article_views",
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-viewed_at"]
+        indexes = [
+            models.Index(
+                fields=["article", "-viewed_at"],
+                name="article_view_article_idx",
+            ),
+            models.Index(
+                fields=["user", "-viewed_at"],
+                name="article_view_user_idx",
+            ),
+        ]
+        verbose_name = "article view"
+        verbose_name_plural = "article views"
+
+    def __str__(self):
+        viewer = self.user if self.user_id else "anonymous"
+        return f"{viewer} — {self.article}"

@@ -6,7 +6,7 @@ from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Article, Comment, SavedArticle, Tag, WebsiteSettings
+from .models import Article, ArticleView, Comment, SavedArticle, Tag, WebsiteSettings
 from .utils import build_url
 
 
@@ -32,6 +32,49 @@ class WebsiteSettingsTests(TestCase):
         self.assertEqual(first.pk, 1)
         self.assertEqual(first.pk, second.pk)
         self.assertEqual(WebsiteSettings.objects.count(), 1)
+
+
+class ArticleViewModelTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="history-reader",
+            password="test-password",
+        )
+        cls.article = Article.objects.create(
+            title="Стаття з історією переглядів",
+            slug="article-with-view-history",
+            body="Текст статті.",
+            status=Article.Status.PUBLISHED,
+            published_at=timezone.now(),
+        )
+
+    def test_view_can_be_linked_to_user_and_article(self):
+        article_view = ArticleView.objects.create(
+            article=self.article,
+            user=self.user,
+        )
+
+        self.assertEqual(article_view.article, self.article)
+        self.assertEqual(article_view.user, self.user)
+        self.assertEqual(self.article.views.get(), article_view)
+        self.assertEqual(self.user.article_views.get(), article_view)
+
+    def test_anonymous_view_can_be_recorded(self):
+        article_view = ArticleView.objects.create(article=self.article)
+
+        self.assertIsNone(article_view.user)
+
+    def test_deleting_user_preserves_view_for_statistics(self):
+        article_view = ArticleView.objects.create(
+            article=self.article,
+            user=self.user,
+        )
+
+        self.user.delete()
+        article_view.refresh_from_db()
+
+        self.assertIsNone(article_view.user)
 
 
 class ArticlePageTests(TestCase):
@@ -141,6 +184,110 @@ class ArticlePageTests(TestCase):
         )
 
         self.assertContains(response, "PRIVATE_ENDING")
+
+    def test_authenticated_article_view_saves_user_article_and_time(self):
+        self.client.force_login(self.user)
+        before_request = timezone.now()
+
+        self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        article_view = ArticleView.objects.get()
+        self.assertEqual(article_view.user, self.user)
+        self.assertEqual(article_view.article, self.public_article)
+        self.assertGreaterEqual(article_view.viewed_at, before_request)
+        self.assertLessEqual(article_view.viewed_at, timezone.now())
+
+    def test_anonymous_article_view_is_recorded_without_user(self):
+        self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        article_view = ArticleView.objects.get()
+        self.assertIsNone(article_view.user)
+        self.assertEqual(article_view.article, self.public_article)
+
+    def test_page_refresh_does_not_create_another_view_in_same_session(self):
+        article_url = reverse(
+            "articles:article_detail",
+            kwargs={"slug": self.public_article.slug},
+        )
+
+        self.client.get(article_url)
+        self.client.get(article_url)
+
+        self.assertEqual(
+            ArticleView.objects.filter(article=self.public_article).count(),
+            1,
+        )
+
+    def test_new_session_creates_another_article_view(self):
+        article_url = reverse(
+            "articles:article_detail",
+            kwargs={"slug": self.public_article.slug},
+        )
+        first_session_client = Client()
+        second_session_client = Client()
+
+        first_session_client.get(article_url)
+        second_session_client.get(article_url)
+
+        self.assertEqual(
+            ArticleView.objects.filter(article=self.public_article).count(),
+            2,
+        )
+
+    def test_bot_article_view_is_recorded(self):
+        self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            ),
+            HTTP_USER_AGENT="Mozilla/5.0 (compatible; Googlebot/2.1)",
+        )
+
+        self.assertEqual(
+            ArticleView.objects.filter(article=self.public_article).count(),
+            1,
+        )
+
+    def test_staff_article_view_is_not_recorded(self):
+        staff_user = get_user_model().objects.create_user(
+            username="staff-reader",
+            password="test-password",
+            is_staff=True,
+        )
+        self.client.force_login(staff_user)
+
+        self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertFalse(ArticleView.objects.exists())
+
+    def test_article_page_displays_current_view_count(self):
+        ArticleView.objects.create(article=self.public_article)
+        ArticleView.objects.create(article=self.public_article, user=self.user)
+
+        response = self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertEqual(response.context["view_count"], 3)
+        self.assertContains(response, "Перегляди: 3")
 
     def test_authenticated_user_can_save_article_for_later(self):
         self.client.force_login(self.user)

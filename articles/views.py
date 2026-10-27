@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import CommentForm
 from .models import Article, Comment, SavedArticle
+from .services import record_article_view
 from .utils import build_url
 
 
@@ -75,6 +76,8 @@ def article_detail(request, slug):
         status=Article.Status.PUBLISHED,
         published_at__lte=timezone.now(),
     )
+    record_article_view(request, article)
+    view_count = article.views.count()
     is_locked = (
         article.access_level == Article.AccessLevel.REGISTERED
         and not request.user.is_authenticated
@@ -109,6 +112,7 @@ def article_detail(request, slug):
         "articles/article_detail.html",
         {
             "article": article,
+            "view_count": view_count,
             "is_locked": is_locked,
             "is_saved": is_saved,
             "related_articles": related_articles,

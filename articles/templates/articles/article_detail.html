@@ -13,7 +13,7 @@
             {% endfor %}
         </div>
         <h1 class="article-title my-3">{{ article.title }}</h1>
-        {% include "articles/partials/article_meta.html" with article=article %}
+        {% include "articles/partials/article_meta.html" with article=article show_view_count=True view_count=view_count %}
 
         <div class="mt-4">
             {% if user.is_authenticated %}
