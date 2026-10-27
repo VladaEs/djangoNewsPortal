@@ -192,17 +192,23 @@ class ArticlePageTests(TestCase):
         response = self.client.get(reverse("articles:personalized_feed"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context["view_history"]), 1)
-        self.assertContains(response, self.public_article.title)
-        self.assertNotContains(response, self.old_article.title)
+        recommended_ids = {
+            recommendation.article.pk
+            for recommendation in response.context["recommendations"]
+        }
+        self.assertNotIn(self.public_article.pk, recommended_ids)
+        self.assertIn(self.old_article.pk, recommended_ids)
+        self.assertEqual(response.context["interest_tags"][0], self.tag)
+        self.assertEqual(response.context["interest_tags"][0].weight, 2)
 
     def test_personalized_feed_falls_back_to_latest_articles(self):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("articles:personalized_feed"))
 
-        self.assertFalse(response.context["view_history"])
-        self.assertContains(response, "Почніть зі свіжих матеріалів")
+        self.assertTrue(response.context["is_fallback"])
+        self.assertTrue(response.context["recommendations"])
+        self.assertContains(response, "Свіжі матеріали")
         self.assertContains(response, self.public_article.title)
 
     def test_restricted_article_hides_full_body_from_anonymous_user(self):

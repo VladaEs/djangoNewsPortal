@@ -9,8 +9,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .forms import CommentForm
-from .models import Article, ArticleView, Comment, SavedArticle
-from .services import record_article_view
+from .models import Article, Comment, SavedArticle
+from .services import build_personalized_feed, record_article_view
 from .utils import build_url
 
 
@@ -71,44 +71,15 @@ def article_list(request):
 
 @login_required
 def personalized_feed(request):
-    history_queryset = (
-        ArticleView.objects.filter(
-            user=request.user,
-            article__status=Article.Status.PUBLISHED,
-            article__published_at__lte=timezone.now(),
-        )
-        .select_related("article", "article__author")
-        .order_by("-viewed_at")[:100]
-    )
-
-    view_history = []
-    seen_article_ids = set()
-    for article_view in history_queryset:
-        if article_view.article_id in seen_article_ids:
-            continue
-
-        seen_article_ids.add(article_view.article_id)
-        view_history.append(article_view)
-        if len(view_history) == 12:
-            break
-
-    latest_articles = []
-    if not view_history:
-        latest_articles = list(
-            Article.objects.filter(
-                status=Article.Status.PUBLISHED,
-                published_at__lte=timezone.now(),
-            )
-            .select_related("author")
-            .order_by("-published_at", "-created_at")[:8]
-        )
+    feed = build_personalized_feed(request.user)
 
     return render(
         request,
         "articles/personalized_feed.html",
         {
-            "view_history": view_history,
-            "latest_articles": latest_articles,
+            "recommendations": feed.recommendations,
+            "interest_tags": feed.interest_tags,
+            "is_fallback": feed.is_fallback,
             "is_personalized_feed": True,
         },
     )

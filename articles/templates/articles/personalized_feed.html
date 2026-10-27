@@ -8,59 +8,71 @@
         <p class="editorial-kicker mb-2">Персональна стрічка</p>
         <h1 class="display-title mb-3">Для вас</h1>
         <p class="story-summary mb-0">
-            Ваші останні перегляди та матеріали, з яких починається персональна добірка.
+            {% if is_fallback %}
+                Свіжі матеріали, з яких можна почати знайомство з порталом.
+            {% else %}
+                Вище показані матеріали з тегами, які ви переглядали найчастіше.
+            {% endif %}
         </p>
     </header>
 
-    {% if view_history %}
-        <h2 class="section-heading mb-0">Останні перегляди</h2>
-        <div class="list-group list-group-flush">
-            {% for article_view in view_history %}
-                <a
-                    class="list-group-item list-group-item-action bg-transparent px-0 py-4"
-                    href="{% url 'articles:article_detail' article_view.article.slug %}"
-                >
-                    <div class="d-flex justify-content-between align-items-start gap-3">
-                        <div>
-                            <p class="editorial-kicker mb-2">
-                                {{ article_view.article.get_content_type_display }}
+    {% if interest_tags %}
+        <aside class="border-top border-bottom py-3 mb-5" aria-label="Ваші основні інтереси">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <strong class="small text-uppercase me-2">Ваші інтереси</strong>
+                {% for interest in interest_tags %}
+                    <span class="badge rounded-0 text-bg-light border">
+                        {{ interest.name }} ×{{ interest.weight }}
+                    </span>
+                {% endfor %}
+            </div>
+        </aside>
+    {% endif %}
+
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-end gap-2 mb-4">
+        <h2 class="section-heading flex-grow-1 mb-0">
+            {% if is_fallback %}Свіжі матеріали{% else %}Рекомендовано для вас{% endif %}
+        </h2>
+    </div>
+
+    {% if recommendations %}
+        <div class="row row-cols-1 row-cols-md-2 g-4">
+            {% for recommendation in recommendations %}
+                <div class="col">
+                    <article class="news-card h-100 pt-3">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                            <p class="editorial-kicker mb-0">
+                                {{ recommendation.article.get_content_type_display }}
                             </p>
-                            <h3 class="related-title mb-2">{{ article_view.article.title }}</h3>
-                            {% include "articles/partials/article_meta.html" with article=article_view.article %}
-                            <p class="small text-secondary mt-2 mb-0">
-                                Переглянуто {{ article_view.viewed_at|date:"j F Y, H:i" }}
-                            </p>
+                            {% if not is_fallback %}
+                                <span class="small text-secondary text-nowrap">
+                                    Рейтинг {{ recommendation.score }}
+                                </span>
+                            {% endif %}
                         </div>
-                        <span class="fs-4 text-secondary" aria-hidden="true">→</span>
-                    </div>
-                </a>
+
+                        <h3>
+                            <a class="text-decoration-none" href="{% url 'articles:article_detail' recommendation.article.slug %}">
+                                {{ recommendation.article.title }}
+                            </a>
+                        </h3>
+                        {% include "articles/partials/article_meta.html" with article=recommendation.article %}
+
+                        {% if recommendation.matched_tags %}
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                {% for tag in recommendation.matched_tags %}
+                                    <span class="editorial-kicker">{{ tag.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </article>
+                </div>
             {% endfor %}
         </div>
     {% else %}
-        <div class="mb-4">
-            <h2 class="section-heading mb-3">Почніть зі свіжих матеріалів</h2>
-            <p class="text-secondary">
-                Історія переглядів поки порожня. Відкрийте кілька статей, щоб ми могли сформувати вашу добірку.
-            </p>
-        </div>
-
-        <div class="row row-cols-1 row-cols-md-2 g-4">
-            {% for article in latest_articles %}
-                <div class="col">
-                    <article class="news-card h-100 pt-3">
-                        <p class="editorial-kicker mb-2">{{ article.get_content_type_display }}</p>
-                        <h3>
-                            <a class="text-decoration-none" href="{% url 'articles:article_detail' article.slug %}">
-                                {{ article.title }}
-                            </a>
-                        </h3>
-                        {% include "articles/partials/article_meta.html" with article=article %}
-                    </article>
-                </div>
-            {% empty %}
-                <p class="text-secondary">Опублікованих матеріалів поки немає.</p>
-            {% endfor %}
-        </div>
+        <p class="text-secondary">
+            Ви вже переглянули всі доступні матеріали. Нові рекомендації з’являться після наступних публікацій.
+        </p>
     {% endif %}
 </section>
 {% endblock %}
