@@ -92,6 +92,10 @@ class Article(models.Model):
         allow_unicode=True,
     )
     body = models.TextField()
+    image = models.CharField(
+        max_length=255,
+        default="articles/images/image1.png",
+    )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

@@ -89,6 +89,7 @@ class ArticlePageTests(TestCase):
             title="Публічна міська новина",
             slug="public-city-news",
             body="Відкритий демонстраційний текст міської новини.",
+            image="articles/images/image2.jpg",
             author=cls.user,
             status=Article.Status.PUBLISHED,
             published_at=timezone.now(),
@@ -107,6 +108,7 @@ class ArticlePageTests(TestCase):
             title="Матеріал для читачів",
             slug="reader-only-story",
             body=("Вступний текст " * 50) + "PRIVATE_ENDING",
+            image="articles/images/image5.jpg",
             author=cls.user,
             status=Article.Status.PUBLISHED,
             access_level=Article.AccessLevel.REGISTERED,
@@ -118,6 +120,23 @@ class ArticlePageTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.public_article.title)
+        self.assertContains(
+            response,
+            "/static/articles/images/image5.jpg",
+        )
+
+    def test_article_detail_uses_its_own_image(self):
+        response = self.client.get(
+            reverse(
+                "articles:article_detail",
+                kwargs={"slug": self.public_article.slug},
+            )
+        )
+
+        self.assertContains(
+            response,
+            "/static/articles/images/image2.jpg",
+        )
 
     def test_search_finds_an_article_by_title(self):
         response = self.client.get(

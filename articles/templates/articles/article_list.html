@@ -43,7 +43,7 @@
                 <div class="col-lg-8 lead-column pe-lg-4">
                     <article class="lead-story">
                         <a class="lead-story__image d-block ratio ratio-16x9 overflow-hidden" href="{% url 'articles:article_detail' featured_article.slug %}">
-                            <img class="w-100 h-100" src="{% static 'articles/images/city-news-hero.png' %}" alt="Ранковий вид сучасного міського центру">
+                            <img class="w-100 h-100" src="{% static featured_article.image %}" alt="{{ featured_article.title }}">
                         </a>
                         <div class="pt-4">
                             <p class="editorial-kicker mb-2">{{ featured_article.get_content_type_display }}</p>

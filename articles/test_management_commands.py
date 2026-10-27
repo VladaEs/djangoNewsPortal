@@ -4,7 +4,11 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 
-from .management.commands.seed_news import ARTICLE_DATA, TAG_DATA
+from .management.commands.seed_news import (
+    ARTICLE_DATA,
+    ARTICLE_IMAGE_PATHS,
+    TAG_DATA,
+)
 from .models import Article, Tag
 
 
@@ -32,6 +36,12 @@ class SeedNewsCommandTests(TestCase):
         )
         self.assertTrue(
             all(article.tags.exists() for article in demo_articles)
+        )
+        self.assertTrue(
+            all(
+                article.image in ARTICLE_IMAGE_PATHS
+                for article in demo_articles
+            )
         )
         self.assertIn("24 created", output)
 

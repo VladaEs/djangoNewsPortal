@@ -19,6 +19,14 @@ TAG_DATA = (
     ("Технології", "tekhnolohii"),
 )
 
+ARTICLE_IMAGE_PATHS = (
+    "articles/images/image1.png",
+    "articles/images/image2.jpg",
+    "articles/images/image3.jpg",
+    "articles/images/image4.jpg",
+    "articles/images/image5.jpg",
+)
+
 
 ARTICLE_DATA = (
     {
@@ -308,6 +316,9 @@ class Command(BaseCommand):
                 defaults={
                     "title": data["title"],
                     "body": data["body"],
+                    "image": ARTICLE_IMAGE_PATHS[
+                        days_ago % len(ARTICLE_IMAGE_PATHS)
+                    ],
                     "author": editor,
                     "content_type": data.get("content_type", "news"),
                     "status": Article.Status.PUBLISHED,

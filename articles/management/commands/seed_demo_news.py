@@ -7,6 +7,15 @@ from django.utils import timezone
 from articles.models import Article, Tag, WebsiteSettings
 
 
+ARTICLE_IMAGE_PATHS = (
+    "articles/images/image1.png",
+    "articles/images/image2.jpg",
+    "articles/images/image3.jpg",
+    "articles/images/image4.jpg",
+    "articles/images/image5.jpg",
+)
+
+
 DEMO_ARTICLES = [
     {
         "title": "Місто відкриває оновлену набережну після великої реконструкції",
@@ -98,10 +107,14 @@ class Command(BaseCommand):
         now = timezone.now()
         created_count = 0
 
-        for item in DEMO_ARTICLES:
+        for article_index, item in enumerate(DEMO_ARTICLES):
             tag_specs = item["tags"]
+            image_path = ARTICLE_IMAGE_PATHS[
+                article_index % len(ARTICLE_IMAGE_PATHS)
+            ]
             defaults = {
                 "body": item["body"],
+                "image": image_path,
                 "author": author,
                 "content_type": item.get("content_type", Article.ContentType.NEWS),
                 "status": Article.Status.PUBLISHED,
@@ -117,6 +130,9 @@ class Command(BaseCommand):
             )
             if created:
                 created_count += 1
+            elif article.image != image_path:
+                article.image = image_path
+                article.save(update_fields=["image"])
 
             tags = []
             for name, slug in tag_specs:

@@ -1,10 +1,72 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth import SESSION_KEY
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from articles.models import Article, SavedArticle
+
+from .models import UserBan
+
+
+class UserBanModelTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="banned-reader",
+            password="reader-password",
+        )
+        cls.administrator = get_user_model().objects.create_user(
+            username="ban-administrator",
+            password="administrator-password",
+        )
+
+    def test_ban_without_end_date_is_active(self):
+        ban = UserBan.objects.create(
+            user=self.user,
+            reason="Repeated violations.",
+            created_by=self.administrator,
+        )
+
+        self.assertTrue(ban.is_active)
+
+    def test_expired_ban_is_not_active(self):
+        ban = UserBan.objects.create(
+            user=self.user,
+            reason="Temporary restriction.",
+            starts_at=timezone.now() - timedelta(days=2),
+            ends_at=timezone.now() - timedelta(days=1),
+            created_by=self.administrator,
+        )
+
+        self.assertFalse(ban.is_active)
+
+    def test_future_ban_is_not_active_yet(self):
+        ban = UserBan.objects.create(
+            user=self.user,
+            reason="Scheduled restriction.",
+            starts_at=timezone.now() + timedelta(days=1),
+            ends_at=timezone.now() + timedelta(days=2),
+            created_by=self.administrator,
+        )
+
+        self.assertFalse(ban.is_active)
+
+    def test_ban_end_must_be_later_than_start(self):
+        starts_at = timezone.now()
+        ban = UserBan(
+            user=self.user,
+            reason="Invalid dates.",
+            starts_at=starts_at,
+            ends_at=starts_at - timedelta(minutes=1),
+            created_by=self.administrator,
+        )
+
+        with self.assertRaises(ValidationError):
+            ban.full_clean()
 
 
 class AuthenticationPageTests(TestCase):

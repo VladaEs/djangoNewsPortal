@@ -41,8 +41,8 @@
     </header>
 
     <figure class="container mt-5 mb-0">
-        <img class="img-fluid w-100 article-hero" src="{% static 'articles/images/city-news-hero.png' %}" alt="Панорама сучасного міського центру">
-        <figcaption class="text-secondary small mt-2">Демонстраційне редакційне зображення.</figcaption>
+        <img class="img-fluid w-100 article-hero" src="{% static article.image %}" alt="{{ article.title }}">
+        <figcaption class="text-secondary small mt-2"></figcaption>
     </figure>
 
     <div class="container article-container pt-4 pt-md-5">
