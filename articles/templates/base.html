@@ -7,6 +7,7 @@
     <meta name="description" content="{{ website_settings.tagline }}">
     <title>{% block title %}{{ website_settings.site_name }}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    {% block page_styles %}{% endblock %}
     <link rel="stylesheet" href="{% static 'articles/css/main.css' %}">
     <script src="{% static 'articles/js/main.js' %}"></script>
     
@@ -36,6 +37,9 @@
                 {% else %}
                     <a class="d-none d-sm-inline" href="{% url 'accounts:register' %}">Реєстрація</a>
                     <a href="{% url 'accounts:login' %}">Увійти</a>
+                {% endif %}
+                {% if request.user.is_portal_administrator %}
+                    <a href="{% url 'articles:article_statistics' %}">Статистика</a>
                 {% endif %}
                 {% if request.user.is_staff %}
                     <a href="{% url 'admin:index' %}">Адмінпанель</a>

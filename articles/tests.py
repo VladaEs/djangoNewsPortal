@@ -2,9 +2,12 @@ from datetime import timedelta
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
+
+from accounts.models import PORTAL_ADMINISTRATORS_GROUP_NAME
 
 from .models import Article, ArticleView, Comment, SavedArticle, Tag, WebsiteSettings
 from .utils import build_url
@@ -76,6 +79,177 @@ class ArticleViewModelTests(TestCase):
 
         self.assertIsNone(article_view.user)
 
+
+class ArticleStatisticsTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        now = timezone.now()
+        cls.staff_user = get_user_model().objects.create_user(
+            username="statistics-admin",
+            password="admin-password",
+            is_staff=True,
+        )
+        portal_administrators, _ = Group.objects.get_or_create(
+            name=PORTAL_ADMINISTRATORS_GROUP_NAME,
+        )
+        cls.staff_user.groups.add(portal_administrators)
+        cls.other_staff_user = get_user_model().objects.create_user(
+            username="other-staff-user",
+            password="admin-password",
+            is_staff=True,
+        )
+        cls.regular_user = get_user_model().objects.create_user(
+            username="statistics-reader",
+            password="reader-password",
+        )
+        cls.second_reader = get_user_model().objects.create_user(
+            username="second-statistics-reader",
+            password="reader-password",
+        )
+        cls.most_viewed_article = Article.objects.create(
+            title="Most viewed article",
+            slug="most-viewed-article",
+            body="Most viewed article body.",
+            author=cls.staff_user,
+            status=Article.Status.PUBLISHED,
+            published_at=now,
+        )
+        cls.less_viewed_article = Article.objects.create(
+            title="Less viewed article",
+            slug="less-viewed-article",
+            body="Less viewed article body.",
+            author=cls.staff_user,
+            status=Article.Status.PUBLISHED,
+            published_at=now - timedelta(days=1),
+        )
+
+        for _ in range(3):
+            ArticleView.objects.create(article=cls.most_viewed_article)
+
+        old_view = ArticleView.objects.create(
+            article=cls.less_viewed_article,
+        )
+        ArticleView.objects.filter(pk=old_view.pk).update(
+            viewed_at=now - timedelta(days=2),
+        )
+        Comment.objects.create(
+            article=cls.most_viewed_article,
+            user=cls.regular_user,
+            body="One comment.",
+        )
+        Comment.objects.create(
+            article=cls.less_viewed_article,
+            user=cls.regular_user,
+            body="First comment.",
+        )
+        old_comment = Comment.objects.create(
+            article=cls.less_viewed_article,
+            user=cls.second_reader,
+            body="Second comment.",
+        )
+        Comment.objects.filter(pk=old_comment.pk).update(
+            created_at=now - timedelta(days=8),
+        )
+        SavedArticle.objects.create(
+            article=cls.most_viewed_article,
+            user=cls.regular_user,
+        )
+        SavedArticle.objects.create(
+            article=cls.less_viewed_article,
+            user=cls.regular_user,
+        )
+        old_save = SavedArticle.objects.create(
+            article=cls.less_viewed_article,
+            user=cls.second_reader,
+        )
+        SavedArticle.objects.filter(pk=old_save.pk).update(
+            saved_at=now - timedelta(days=40),
+        )
+
+    def test_statistics_requires_staff_user(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.get(reverse("articles:article_statistics"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("admin:login"), response.url)
+
+    def test_statistics_rejects_staff_user_outside_portal_admin_group(self):
+        self.client.force_login(self.other_staff_user)
+
+        response = self.client.get(reverse("articles:article_statistics"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("admin:login"), response.url)
+
+    def test_statistics_ranks_articles_by_view_count(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.get(reverse("articles:article_statistics"))
+        ranking = list(response.context["article_ranking"])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ranking[0], self.most_viewed_article)
+        self.assertEqual(ranking[0].view_count, 3)
+        self.assertEqual(ranking[0].comment_count, 1)
+        self.assertEqual(ranking[0].save_count, 1)
+        self.assertEqual(ranking[1], self.less_viewed_article)
+        self.assertEqual(ranking[1].view_count, 1)
+        self.assertEqual(ranking[1].comment_count, 2)
+        self.assertEqual(ranking[1].save_count, 2)
+        self.assertEqual(response.context["total_views"], 4)
+        self.assertEqual(response.context["total_comments"], 3)
+        self.assertEqual(response.context["total_saves"], 3)
+        self.assertContains(response, 'id="article-statistics-table"')
+        self.assertContains(response, "dataTables.bootstrap5.min.css")
+        self.assertContains(response, "article-statistics.js")
+        self.assertContains(response, "За коментарями")
+        self.assertContains(response, "За збереженнями")
+
+    def test_statistics_can_be_filtered_by_custom_date_range(self):
+        self.client.force_login(self.staff_user)
+        today = timezone.localdate()
+
+        response = self.client.get(
+            reverse("articles:article_statistics"),
+            {
+                "date_from": today.isoformat(),
+                "date_to": today.isoformat(),
+            },
+        )
+        ranking = {
+            article.pk: article
+            for article in response.context["article_ranking"]
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total_views"], 3)
+        self.assertEqual(response.context["total_comments"], 2)
+        self.assertEqual(response.context["total_saves"], 2)
+        self.assertEqual(ranking[self.most_viewed_article.pk].view_count, 3)
+        self.assertEqual(ranking[self.less_viewed_article.pk].view_count, 0)
+        self.assertEqual(ranking[self.less_viewed_article.pk].comment_count, 1)
+        self.assertEqual(ranking[self.less_viewed_article.pk].save_count, 1)
+        self.assertContains(response, 'name="date_from"')
+        self.assertContains(response, 'name="date_to"')
+
+    def test_statistics_rejects_reversed_date_range(self):
+        self.client.force_login(self.staff_user)
+        today = timezone.localdate()
+
+        response = self.client.get(
+            reverse("articles:article_statistics"),
+            {
+                "date_from": today.isoformat(),
+                "date_to": (today - timedelta(days=1)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "Дата завершення має бути не раніше дати початку.",
+            response.context["statistics_form"].errors["date_to"],
+        )
 
 class ArticlePageTests(TestCase):
     @classmethod

@@ -1,15 +1,19 @@
+from datetime import datetime, time, timedelta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import CommentForm
-from .models import Article, Comment, SavedArticle
+from accounts.decorators import portal_administrator_required
+
+from .forms import CommentForm, StatisticsDateFilterForm
+from .models import Article, ArticleView, Comment, SavedArticle
 from .services import build_personalized_feed, record_article_view
 from .utils import build_url
 
@@ -49,9 +53,9 @@ def article_list(request):
         articles = articles.filter(tags__slug=selected_tag)
 
     if sort == "old_first":
-        articles = articles.order_by("published_at", "created_at")
+        articles = articles.order_by("published_at", "created_at", "pk")
     else:
-        articles = articles.order_by("-published_at", "-created_at")
+        articles = articles.order_by("-published_at", "-created_at", "-pk")
 
     article_list = list(articles.distinct()[:12])
 
@@ -81,6 +85,116 @@ def personalized_feed(request):
             "interest_tags": feed.interest_tags,
             "is_fallback": feed.is_fallback,
             "is_personalized_feed": True,
+        },
+    )
+
+
+@portal_administrator_required
+def article_statistics(request):
+    now = timezone.now()
+    statistics_form = StatisticsDateFilterForm(request.GET)
+    period_start = None
+    period_end = None
+
+    if statistics_form.is_valid():
+        date_from = statistics_form.cleaned_data.get("date_from")
+        date_to = statistics_form.cleaned_data.get("date_to")
+        current_timezone = timezone.get_current_timezone()
+
+        if date_from is not None:
+            period_start = timezone.make_aware(
+                datetime.combine(date_from, time.min),
+                current_timezone,
+            )
+
+        if date_to is not None:
+            next_date = date_to + timedelta(days=1)
+            period_end = timezone.make_aware(
+                datetime.combine(next_date, time.min),
+                current_timezone,
+            )
+
+    view_count_filter = None
+    comment_count_filter = None
+    save_count_filter = None
+
+    if period_start is not None:
+        view_count_filter = Q(views__viewed_at__gte=period_start)
+        comment_count_filter = Q(comments__created_at__gte=period_start)
+        save_count_filter = Q(saved_by_users__saved_at__gte=period_start)
+
+    if period_end is not None:
+        view_end_filter = Q(views__viewed_at__lt=period_end)
+        comment_end_filter = Q(comments__created_at__lt=period_end)
+        save_end_filter = Q(saved_by_users__saved_at__lt=period_end)
+
+        if view_count_filter is None:
+            view_count_filter = view_end_filter
+            comment_count_filter = comment_end_filter
+            save_count_filter = save_end_filter
+        else:
+            view_count_filter = view_count_filter & view_end_filter
+            comment_count_filter = comment_count_filter & comment_end_filter
+            save_count_filter = save_count_filter & save_end_filter
+
+    published_articles = Article.objects.filter(
+        status=Article.Status.PUBLISHED,
+        published_at__lte=now,
+    )
+    article_ranking = (
+        published_articles.select_related("author")
+        .annotate(
+            view_count=Count(
+                "views",
+                filter=view_count_filter,
+                distinct=True,
+            ),
+            comment_count=Count(
+                "comments",
+                filter=comment_count_filter,
+                distinct=True,
+            ),
+            save_count=Count(
+                "saved_by_users",
+                filter=save_count_filter,
+                distinct=True,
+            ),
+        )
+        .order_by("-view_count", "-published_at", "title")
+    )
+    article_views = ArticleView.objects.filter(
+        article__status=Article.Status.PUBLISHED,
+        article__published_at__lte=now,
+    )
+    comments = Comment.objects.filter(
+        article__status=Article.Status.PUBLISHED,
+        article__published_at__lte=now,
+    )
+    saved_articles = SavedArticle.objects.filter(
+        article__status=Article.Status.PUBLISHED,
+        article__published_at__lte=now,
+    )
+
+    if period_start is not None:
+        article_views = article_views.filter(viewed_at__gte=period_start)
+        comments = comments.filter(created_at__gte=period_start)
+        saved_articles = saved_articles.filter(saved_at__gte=period_start)
+
+    if period_end is not None:
+        article_views = article_views.filter(viewed_at__lt=period_end)
+        comments = comments.filter(created_at__lt=period_end)
+        saved_articles = saved_articles.filter(saved_at__lt=period_end)
+
+    return render(
+        request,
+        "articles/article_statistics.html",
+        {
+            "article_ranking": article_ranking,
+            "total_articles": published_articles.count(),
+            "total_views": article_views.count(),
+            "total_comments": comments.count(),
+            "total_saves": saved_articles.count(),
+            "statistics_form": statistics_form,
         },
     )
 

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Статистика переглядів · {{ website_settings.site_name }}{% endblock %}
+
+{% block page_styles %}
+    <link rel="stylesheet" href="https://cdn.datatables.net/3.1.4/css/dataTables.bootstrap5.min.css">
+{% endblock %}
+
+{% block page_scripts %}
+    <script src="https://cdn.datatables.net/3.1.4/js/dataTables.min.js" defer></script>
+    <script src="https://cdn.datatables.net/3.1.4/js/dataTables.bootstrap5.min.js" defer></script>
+    <script src="{% static 'articles/js/article-statistics.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="container article-container py-5">
+    <header class="mb-5">
+        <p class="editorial-kicker mb-2">Адміністрування порталу</p>
+        <h1 class="display-title mb-3">Статистика переглядів</h1>
+        <p class="story-summary mb-0">
+            Рейтинг опублікованих матеріалів за кількістю зафіксованих переглядів.
+        </p>
+    </header>
+
+    <form class="border p-3 p-md-4 mb-4" method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-sm-6 col-lg-4">
+                <label class="form-label" for="{{ statistics_form.date_from.id_for_label }}">
+                    {{ statistics_form.date_from.label }}
+                </label>
+                {{ statistics_form.date_from }}
+                {% for error in statistics_form.date_from.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <label class="form-label" for="{{ statistics_form.date_to.id_for_label }}">
+                    {{ statistics_form.date_to.label }}
+                </label>
+                {{ statistics_form.date_to }}
+                {% for error in statistics_form.date_to.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-lg-4 d-flex flex-column flex-sm-row gap-2">
+                <button class="btn btn-editorial rounded-0" type="submit">Застосувати</button>
+                <a class="btn btn-outline-editorial rounded-0" href="{% url 'articles:article_statistics' %}">
+                    Скинути
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <div class="row g-3 mb-5">
+        <div class="col-sm-6 col-xl-3">
+            <div class="border p-4 h-100">
+                <span class="editorial-kicker d-block mb-2">Усього переглядів</span>
+                <strong class="display-5">{{ total_views }}</strong>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="border p-4 h-100">
+                <span class="editorial-kicker d-block mb-2">Усього коментарів</span>
+                <strong class="display-5">{{ total_comments }}</strong>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="border p-4 h-100">
+                <span class="editorial-kicker d-block mb-2">Усього збережень</span>
+                <strong class="display-5">{{ total_saves }}</strong>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="border p-4 h-100">
+                <span class="editorial-kicker d-block mb-2">Опублікованих матеріалів</span>
+                <strong class="display-5">{{ total_articles }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-end justify-content-between gap-3 section-title-row mb-4">
+        <h2 class="section-heading flex-grow-1 mb-0">Рейтинг матеріалів</h2>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-4" aria-label="Сортування рейтингу">
+        <button class="btn btn-outline-editorial rounded-0" type="button" data-statistics-column="4">
+            За переглядами
+        </button>
+        <button class="btn btn-outline-editorial rounded-0" type="button" data-statistics-column="5">
+            За коментарями
+        </button>
+        <button class="btn btn-outline-editorial rounded-0" type="button" data-statistics-column="6">
+            За збереженнями
+        </button>
+    </div>
+
+    {% if article_ranking %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="article-statistics-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Місце</th>
+                        <th scope="col">Матеріал</th>
+                        <th scope="col">Автор</th>
+                        <th scope="col">Дата публікації</th>
+                        <th class="text-end" scope="col">Перегляди</th>
+                        <th class="text-end" scope="col">Коментарі</th>
+                        <th class="text-end" scope="col">Збереження</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for article in article_ranking %}
+                        <tr>
+                            <th class="statistics-rank" scope="row">{{ forloop.counter }}</th>
+                            <td>
+                                <a class="text-decoration-none" href="{% url 'articles:article_detail' article.slug %}">
+                                    {{ article.title }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if article.author %}
+                                    {{ article.author.get_full_name|default:article.author.username }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td data-order="{{ article.published_at|date:'U' }}">
+                                {{ article.published_at|date:"j F Y, H:i" }}
+                            </td>
+                            <td class="text-end fw-bold">{{ article.view_count }}</td>
+                            <td class="text-end fw-bold">{{ article.comment_count }}</td>
+                            <td class="text-end fw-bold">{{ article.save_count }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-secondary mb-0">Опублікованих матеріалів поки немає.</p>
+    {% endif %}
+</section>
+{% endblock %}

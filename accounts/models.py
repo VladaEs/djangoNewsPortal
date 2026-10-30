@@ -2,10 +2,24 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from django.utils.functional import cached_property
+
+
+PORTAL_ADMINISTRATORS_GROUP_NAME = "Portal Administrators"
 
 
 class User(AbstractUser):
-    pass
+    @cached_property
+    def is_portal_administrator(self):
+        if not self.is_active or not self.is_staff:
+            return False
+
+        if self.is_superuser:
+            return True
+
+        return self.groups.filter(
+            name=PORTAL_ADMINISTRATORS_GROUP_NAME,
+        ).exists()
 
 
 class UserBan(models.Model):
